@@ -1,0 +1,808 @@
+;------------------------------------------------------------
+; システムサンプル(ADV形式)
+;------------------------------------------------------------
+; 00.txtはシステム記述に使っています。ゲーム本編は01.txtから書いていってください。
+; できるだけ小さいものを提供するために、機能は敢えて最小限にしてあります。
+; 文字列スプライトを画像に入れ替えてみたり、立ち絵アニメーション命令を充実させたり、
+; システム機能を追加したり、bgv機能を取り入れてみたり、いろいろやってみてください。
+
+
+
+@start
+gosub @system_initialize ; 初期設定
+goto @scenario_start ; ユーザースクリプトの実行
+
+;-------------------------------
+; GameMenu
+;-------------------------------
+@game_logo
+spset "logo",99
+sp "logo:black",{name="*#00000000",x=0,y=0,z=1100}
+print #f,1000
+sp "logo:white",{name="*#FFFFFFFF",x=0,y=0,z=1099}
+print #f,1000
+sp "logo:busimo",{name="pc\ja\busimo.png",x=0,y=0,z=1098}
+print #f,1000
+sp "logo:whiteb",{name="*#FFFFFFFF",x=0,y=0,z=1097}
+print #f,1000
+sp "logo:craftegg",{name="pc\ja\craftegg.png",x=0,y=0,z=1096}
+print #f,1000
+sp "logo:whitec",{name="*#FFFFFFFF",x=0,y=0,z=1095}
+print #f,1000
+spsetdelete "logo"
+goto @game_menu
+
+@game_menu
+_notinmenu=0
+spset "title",100
+sp "title:bg",{name="pc\ja\title\bg.png",x=0,y=0,z=1100}
+print #f,500
+sp "title:line",{name="pc\ja\title\line.png",x=0,y=564,z=1000}
+print #f,500
+sp "title:start",{name={"pc\ja\title\ns\bt_start.png","pc\ja\title\ns\bt_start_selected.png"},x=133,y=628,z=100};
+sp "title:load",{name={"pc\ja\title\ns\bt_load.png","pc\ja\title\ns\bt_load_selected.png"},x=391,y=628,z=100};
+sp "title:config",{name={"pc\ja\title\ns\bt_config.png","pc\ja\title\ns\bt_config_selected.png"},x=651,y=628,z=100};
+sp "title:extra",{name={"pc\ja\title\ns\bt_extra_disabled.png","pc\ja\title\ns\bt_extra_disabled.png"},x=910,y=628,z=100};
+btn "title:start"
+btn "title:load"
+btn "title:config"
+btn "title:extra"
+bgmplay "sound\bgm\bgm001_a.ogg"
+
+@menu_loop
+btnexec %ret,"title"
+if %ret=="start" then seplay 0,"sound\sysse\sys01.ogg":bgmfadeout 3000:bgmstop:spsetdelete "title":goto @load_window
+if %ret=="load" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "title",0:issave=0:gosub @saveload:spsetvisible "title",1:goto @menu_loop
+if %ret=="config" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "title",0:gosub @config:spsetvisible "title",1:goto @menu_loop
+goto @menu_loop
+;-------------------------------
+; ウィンドウ読み込み
+;-------------------------------
+@load_window
+_notinmenu=1
+spset "window",100
+spsetvisible "window",0 ; ユーザーがwindow命令を使うか何か表示文を実行するまでは非表示にしておく。
+sp "window:bg",{name="pc\ja\mw\mw.png",x=128,y=551,z=1100}	  ; ウィンドウ背景
+sp "window:name",{name="pc\ja\mw\name.png",x=130,y=519,z=1000}	 ; 名前欄の背景
+sp "window:text",{name="*830,200,#00000000",x=165,y=575,z=900}	 ; テキスト文字用
+sp "window:skipicon", {name="pc\ja\mw\skip.png",x=-100,y=-100,z=101};
+sp "window:autoicon", {name="pc\ja\mw\auto.png",x=-100,y=-100,z=101};
+sp "window:glyph", {name="pc\ja\mw\glyph.png",x=-100,y=-100,z=101};
+sp "window:gametab", {name="pc\ja\mw\tabbg.png",x=0,y=4,z=101};
+sp "window:selnext", {name="pc\ja\mw\ns\tb_selnext_disabled.png",x=133,y=17,z=100};
+sp "window:auto",  {name={"pc\ja\mw\ns\tb_auto.png","pc\ja\mw\ns\tb_auto_selected.png"},x=261,y=17,z=100};
+sp "window:skip",  {name={"pc\ja\mw\ns\tb_skip.png","pc\ja\mw\ns\tb_skip_selected.png"},x=389,y=17,z=100};
+sp "window:log",   {name={"pc\ja\mw\ns\tb_back.png","pc\ja\mw\ns\tb_back_selected.png"},x=517,y=17,z=100};
+sp "window:save",  {name={"pc\ja\mw\ns\tb_save.png","pc\ja\mw\ns\tb_save_selected.png"},x=645,y=17,z=100};
+sp "window:load",  {name={"pc\ja\mw\ns\tb_load.png","pc\ja\mw\ns\tb_load_selected.png"},x=773,y=17,z=100};
+sp "window:config",{name={"pc\ja\mw\ns\tb_config.png","pc\ja\mw\ns\tb_config_selected.png"},x=901,y=17,z=100};
+sp "window:erase", {name={"pc\ja\mw\ns\tb_close.png","pc\ja\mw\ns\tb_close_selected.png"},x=1029,y=17,z=100};
+sp "window:tbleft", {name={"pc\ja\mw\ns\tb_left.png","pc\ja\mw\ns\tb_left_selected.png"},x=80,y=36,z=100};
+sp "window:tbright", {name={"pc\ja\mw\ns\tb_right.png","pc\ja\mw\ns\tb_right_selected.png"},x=1161,y=36,z=100};
+
+if _tabpos==0 then
+	spmove "window:gametab",-1150,4
+	spmove "window:selnext",133-1150,17
+	spmove "window:auto",261-1150,17
+	spmove "window:skip",389-1150,17
+	spmove "window:log",517-1150,17
+	spmove "window:save",645-1150,17
+	spmove "window:load",773-1150,17
+	spmove "window:config",901-1150,17
+	spmove "window:erase",1029-1150,17
+	spmove "window:tbleft",80-1150,36
+	spmove "window:tbright",1161-1150,36
+end if
+if _tabpos==1 then
+	spmove "window:gametab",0,4
+	spmove "window:selnext",133,17
+	spmove "window:auto",261,17
+	spmove "window:skip",389,17
+	spmove "window:log",517,17
+	spmove "window:save",645,17
+	spmove "window:load",773,17
+	spmove "window:config",901,17
+	spmove "window:erase",1029,17
+	spmove "window:tbleft",80,36
+	spmove "window:tbright",1161,36
+end if
+if _tabpos==2 then
+	spmove "window:gametab",1150,4
+	spmove "window:selnext",133+1150,17
+	spmove "window:auto",261+1150,17
+	spmove "window:skip",389+1150,17
+	spmove "window:log",517+1150,17
+	spmove "window:save",645+1150,17
+	spmove "window:load",773+1150,17
+	spmove "window:config",901+1150,17
+	spmove "window:erase",1029+1150,17
+	spmove "window:tbleft",80+1150,36
+	spmove "window:tbright",1161+1150,36
+end if
+return
+
+;-------------------------------
+; 表示文処理
+;-------------------------------
+@text
+param %tag,%text
+spsetvisible "window",1 ; ウィンドウが非表示なら表示状態にする。
+split %tag,"/",%name,%voice ; タグを名前とボイスに分割
+if %name=="" then
+	spdelete "window:nametext" ; 名前タグのテキストを消す
+else
+	sp "window:nametext",{name="?"+%name+",nametext",x=155,y=528,z=900} ; 名前タグのテキストをロード
+end if
+if %voice=="" then
+	voiceplay "" ;ボイスを止める
+else
+	if getskip()<>1 then
+		voiceplay "sound\vo\"+%voice+".ogg" ;スキップ時以外はボイスを再生
+		;私はCTRL時はボイスを鳴らすように作ることにしています（ボイスファイルチェックに便利なので）。
+	end if
+end if
+spputtext "window:text",0,%text,{font="text",wait=(6-_textspeed)*10,w=29,h=4},{font="ruby"}
+return
+
+@textb
+param %c_x,%c_y ; テキストのカーソル位置。クリック待ちボタンを出すときに使う。ここでは使わない。
+btnclear "window"
+spmove "window:glyph",1085,632
+btn "window:erase"
+if _messkip==1 then
+	if tchk()==1 then btn "window:skip"
+else
+	btn "window:skip"
+end if
+btn "window:auto"
+btn "window:save"
+btn "window:load"
+btn "window:log"
+btn "window:config"
+btn "window:tbright"
+btn "window:tbleft"
+
+@textb_loop
+if _messkip==1 then
+	if tchk()==1 then
+		if getskip()==1 then 
+			spmove "window:skipicon",1015,540
+			return
+		else 
+			spmove "window:skipicon",-100,-100
+		end if
+	end if
+else
+	if getskip()==1 then 
+		spmove "window:skipicon",1015,540
+		return
+	else 
+		spmove "window:skipicon",-100,-100
+	end if
+end if
+if getskip()==2 then
+	spmove "window:autoicon",1023,540
+	btnexec %ret,"window",{wheel=1,ctrl=1,automode=1,time=(6-_autospeed)*500}
+else
+	spmove "window:autoicon",-100,-100
+	btnexec %ret,"window",{wheel=1,ctrl=1}
+end if
+
+if _messkip==1 then
+	if tchk()==1 then 
+		if %ret==#ctrl or %ret==#timeout then return
+	end if
+else
+	if %ret==#ctrl or %ret==#timeout then return
+end if
+if %ret=="" or %ret==#wd then spmove "window:glyph",-100,-100:return
+if %ret=="erase" or %ret==#r then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:lrclick:seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",1:goto @textb_loop
+if %ret=="tbright" then
+	if _tabpos==0 then
+		_tabpos=_tabpos+1
+		spmove "window:gametab",0,4
+		spmove "window:selnext",133,17
+		spmove "window:auto",261,17
+		spmove "window:skip",389,17
+		spmove "window:log",517,17
+		spmove "window:save",645,17
+		spmove "window:load",773,17
+		spmove "window:config",901,17
+		spmove "window:erase",1029,17
+		spmove "window:tbleft",80,36
+		spmove "window:tbright",1161,36
+		goto @textb_loop
+	end if
+	if _tabpos==1 then
+		_tabpos=_tabpos+1
+		spmove "window:gametab",1150,4
+		spmove "window:selnext",133+1150,17
+		spmove "window:auto",261+1150,17
+		spmove "window:skip",389+1150,17
+		spmove "window:log",517+1150,17
+		spmove "window:save",645+1150,17
+		spmove "window:load",773+1150,17
+		spmove "window:config",901+1150,17
+		spmove "window:erase",1029+1150,17
+		spmove "window:tbleft",80+1150,36
+		spmove "window:tbright",1161+1150,36
+		goto @textb_loop
+	end if
+end if
+if %ret=="tbleft" then
+	if _tabpos==1 then
+		_tabpos=_tabpos-1
+		spmove "window:gametab",-1150,4
+		spmove "window:selnext",133-1150,17
+		spmove "window:auto",261-1150,17
+		spmove "window:skip",389-1150,17
+		spmove "window:log",517-1150,17
+		spmove "window:save",645-1150,17
+		spmove "window:load",773-1150,17
+		spmove "window:config",901-1150,17
+		spmove "window:erase",1029-1150,17
+		spmove "window:tbleft",80-1150,36
+		spmove "window:tbright",1161-1150,36
+		goto @textb_loop
+	end if
+	if _tabpos==2 then
+		_tabpos=_tabpos-1
+		spmove "window:gametab",0,4
+		spmove "window:selnext",133,17
+		spmove "window:auto",261,17
+		spmove "window:skip",389,17
+		spmove "window:log",517,17
+		spmove "window:save",645,17
+		spmove "window:load",773,17
+		spmove "window:config",901,17
+		spmove "window:erase",1029,17
+		spmove "window:tbleft",80,36
+		spmove "window:tbright",1161,36
+		goto @textb_loop
+	end if
+end if
+if %ret=="skip" then seplay 0,"sound\sysse\sys01.ogg":skip 1:goto @textb_loop
+if %ret=="auto" then seplay 0,"sound\sysse\sys01.ogg":skip 2:goto @textb_loop
+if %ret=="save" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:issave=1:gosub @saveload:spsetvisible "window",1:goto @textb_loop
+if %ret=="load" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:issave=0:gosub @saveload:spsetvisible "window",1:goto @textb_loop
+if %ret=="log" or %ret==#wu then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:gosub @backlog:spsetvisible "window",1:print #c:goto @textb_loop
+if %ret=="config" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:gosub @config:spsetvisible "window",1:goto @textb_loop
+goto @textb_loop
+return
+
+;-------------------------------
+; 選択肢処理
+;-------------------------------
+@selectb
+;最大選択肢数に合わせて受け取る変数を書いておく。とりあえず４つにしておきます。
+param %cnum,%text0,%lb0,%text1,%lb1,%text2,%lb2,%text3,%lb3,%text4,%lb4
+skip 0
+;スプライトのロード
+sp "window:selwin0",{name={"pc\ja\mw\ns\bt_select.png","pc\ja\mw\ns\bt_select_put.png"},x=247,y=120,z=10}
+sp "window:seltext0",{name="?"+%text0+",text",x=300,y=135,z=0}
+sp "window:selwin1",{name={"pc\ja\mw\ns\bt_select.png","pc\ja\mw\ns\bt_select_put.png"},x=247,y=200,z=10}
+sp "window:seltext1",{name="?"+%text1+",text",x=300,y=215,z=0}
+if %cnum>2 then
+	sp "window:selwin2",{name={"pc\ja\mw\ns\bt_select.png","pc\ja\mw\ns\bt_select_put.png"},x=247,y=280,z=10}
+	sp "window:seltext2",{name="?"+%text2+",text",x=300,y=295,z=0}
+end if
+if %cnum>3 then
+	sp "window:selwin3",{name={"pc\ja\mw\ns\bt_select.png","pc\ja\mw\ns\bt_select_put.png"},x=247,y=360,z=10}
+	sp "window:seltext3",{name="?"+%text3+",text",x=300,y=375,z=0}
+end if
+if %cnum>4 then
+	sp "window:selwin4",{name={"pc\ja\mw\ns\bt_select.png","pc\ja\mw\ns\bt_select_put.png"},x=247,y=440,z=10}
+	sp "window:seltext4",{name="?"+%text4+",text",x=300,y=455,z=0}
+end if
+@sel_start
+btnclear "window"
+btn "window:selwin0"
+btn "window:selwin1"
+btn "window:selwin2"
+btn "window:selwin3"
+btn "window:selwin4"
+btn "window:erase"
+btn "window:save"
+btn "window:load"
+btn "window:log"
+btn "window:config"
+@sel_loop
+btnexec %ret,"window",{wheel=1}
+if %ret=="selwin0" then seplay 0,"sound\sysse\sys01.ogg":spdeletes "window:sel":print #c:return %lb0
+if %ret=="selwin1" then seplay 0,"sound\sysse\sys01.ogg":spdeletes "window:sel":print #c:return %lb1
+if %ret=="selwin2" then seplay 0,"sound\sysse\sys01.ogg":spdeletes "window:sel":print #c:return %lb2
+if %ret=="selwin3" then seplay 0,"sound\sysse\sys01.ogg":spdeletes "window:sel":print #c:return %lb3
+if %ret=="selwin4" then seplay 0,"sound\sysse\sys01.ogg":spdeletes "window:sel":print #c:return %lb4
+if %ret=="erase" or %ret==#r then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:lrclick:seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",1:goto @sel_loop
+if %ret=="save" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:issave=1:gosub @saveload:spsetvisible "window",1:goto @sel_loop
+if %ret=="load" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:issave=0:gosub @saveload:spsetvisible "window",1:goto @sel_loop
+if %ret=="log" or %ret==#wu then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:gosub @backlog:spsetvisible "window",1:print #c:goto @sel_loop
+if %ret=="config" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:gosub @config:spsetvisible "window",1:goto @sel_loop
+goto @sel_loop
+
+;-------------------------------
+; セーブ／ロード
+;-------------------------------
+@saveload
+;セーブとロードは共通の処理が多いので変数で切り分けて書いています。
+spset "sl",100
+if issave==1 then
+	sp "sl:bg",{name="pc\ja\save\bg_save.png",x=0,y=0,z=1000}
+	if _notinmenu==1 then 
+		sp "sl:gotoload",{name={"pc\ja\save\ns\bt_load.png","pc\ja\save\ns\bt_load_selected.png"},x=50,y=656,z=900}
+		btn "sl:gotoload"
+	end if
+else
+	sp "sl:bg",{name="pc\ja\save\bg_load.png",x=0,y=0,z=1000}
+	if _notinmenu==1 then 
+		sp "sl:gotosave",{name={"pc\ja\save\ns\bt_save.png","pc\ja\save\ns\bt_save_selected.png"},x=50,y=656,z=900}
+		btn "sl:gotosave"
+	end if
+end if
+sp "sl:pgup",{name="pc\ja\save\ns\bt_dw.png",x=957,y=34,z=900}
+sp "sl:pgdw",{name="pc\ja\save\ns\bt_up.png",x=1186,y=34,z=900}
+sp "sl:return",{name={"pc\ja\conf\ns\bt_return.png","pc\ja\conf\ns\bt_return_selected.png"},x=1043,y=656,z=900}
+if _notinmenu==1 then sp "sl:backtotitle",{name={"pc\ja\save\ns\bt_title.png","pc\ja\save\ns\bt_title_selected.png"},x=822,y=656,z=900}
+print #f,250
+
+@saveload_btnload
+btnclear "sl"
+%counterx=0
+btn "sl:return"
+btn "sl:backtotitle"
+if issave==1 then
+	btn "sl:gotoload"
+else
+	btn "sl:gotosave"
+end if
+for %i=0 to 11
+	call @saveload_sub,"N",%i
+	if issave==1 or schk(%i) then
+		btn "sl:data"+str(%i)
+	end if
+next
+
+@saveload_loop
+btnexec %ret,"sl"
+if %ret==#r or %ret=="return" then seplay 0,"sound\sysse\sys03.ogg":spsetdelete "sl":return
+if %ret=="gotosave" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:issave=1:gosub @saveload:spsetvisible "window",1:goto @sel_loop
+if %ret=="gotoload" then seplay 0,"sound\sysse\sys01.ogg":spsetvisible "window",0:issave=0:gosub @saveload:spsetvisible "window",1:goto @sel_loop
+if %ret=="backtotitle" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	yesnobox %ret,"タイトルに戻りますか？","確認"
+	if %ret==1 then seplay 0,"sound\sysse\sys01.ogg":spsetdelete "window":spsetdelete "sl":goto @start else seplay 0,"sound\sysse\sys03.ogg":goto @saveload_loop
+end if
+if left(%ret,4)=="data" then goto @saveload_exec
+goto @saveload_loop
+
+@saveload_exec
+%num=num(mid(%ret,4,100))
+seplay 0,"sound\sysse\sys01.ogg"
+if issave==1 then
+	if schk(%num) then
+		yesnobox %ret,"セーブデータを上書きしますか？","確認"
+		if %ret==0 then seplay 0,"sound\sysse\sys03.ogg":goto @saveload_loop
+	else
+		yesnobox %ret,"セーブしますか？","確認"
+		if %ret==0 then seplay 0,"sound\sysse\sys03.ogg":goto @saveload_loop
+	end if
+	seplay 0,"sound\sysse\sys01.ogg"
+	save %num
+	goto @saveload_btnload
+else
+	yesnobox %ret,"ロードしますか？","ロード確認"
+	if %ret==1 then seplay 0,"sound\sysse\sys01.ogg":load %num else seplay 0,"sound\sysse\sys03.ogg":goto @saveload_loop
+end if
+
+@saveload_sub
+param %i
+param %counterx
+%sluix=50+%counterx*288
+%counterx=%counterx+1
+%sluiy=118
+if %counterx>4 then
+	%sluix=(%counterx-5)*288+50
+	%sluiy=%sluiy+170
+end if
+if %counterx>8 then
+	%sluix=(%counterx-9)*288+50
+	%sluiy=%sluiy+170
+end if
+if schk(%i)==1 then
+	savetime %i,%year,%month,%day,%hour,%min,%sec
+	%str="?"+strf("%4d",%year)+"/"+strf("%02d",%month)+"/"+strf("%02d",%day)+" "+strf("%02d",%hour)+":"+strf("%02d",%min)+":"+strf("%02d",%sec)
+	sp "sl:data"+str(%i),{name={%str+",save0",%str+",save1"},x=%sluix+10,y=%sluiy+120,z=0}
+	sp "sl:dataimg"+str(%i),{name={"pc\ja\save\ns\bt_slot.png","pc\ja\save\ns\bt_slot_selected.png"},x=%sluix,y=%sluiy,z=0}
+else
+	sp "sl:data"+str(%i),{name={"pc\ja\save\ns\bt_slot.png","pc\ja\save\ns\bt_slot_selected.png"},x=%sluix,y=%sluiy,z=0}
+end if
+return
+
+;-------------------------------
+; バックログ
+;-------------------------------
+@backlog
+spset "log",100
+sp "log:bg",{name="pc\ja\blog\bg.png",x=0,y=0,z=1000}
+sp "log:btn01",{name={"pc\ja\blog\ns\btn.png","pc\ja\blog\ns\btn_selected.png"},x=87,y=77,z=900}
+sp "log:btn02",{name={"pc\ja\blog\ns\btn.png","pc\ja\blog\ns\btn_selected.png"},x=87,y=262,z=900}
+sp "log:btn03",{name={"pc\ja\blog\ns\btn.png","pc\ja\blog\ns\btn_selected.png"},x=87,y=447,z=900}
+sp "log:name01",{name="pc\ja\blog\name.png",x=112,y=51,z=800}
+sp "log:name02",{name="pc\ja\blog\name.png",x=112,y=236,z=800}
+sp "log:name03",{name="pc\ja\blog\name.png",x=112,y=421,z=800}
+sp "log:up",{name={"pc\ja\blog\ns\bt_up.png","pc\ja\blog\ns\bt_up_selected.png"},x=1170,y=89,z=0}
+sp "log:down",{name={"pc\ja\blog\ns\bt_dw.png","pc\ja\blog\ns\bt_dw_selected.png"},x=1170,y=573,z=0}
+sp "log:ret",{name={"pc\ja\blog\ns\bt_ret.png","pc\ja\blog\ns\bt_ret_selected.png"},x=524,y=606,z=800}
+print #f,250
+%page=0
+@backlog_pageload
+btnclear
+call @backlog_pagestart_sub,"SNN","text3",%page+2,424
+call @backlog_pagestart_sub,"SNN","text2",%page+1,239
+call @backlog_pagestart_sub,"SNN","text1",%page  ,54
+print #c
+btn "log:up"
+btn "log:down"
+btn "log:ret"
+
+@backlog_loop
+btnexec %ret,"log",{spcret=1,wheel=1}
+if %ret==#r or %ret=="" or %ret=="ret" then goto @backlog_end
+if %ret==#wu or %ret=="up" then goto @backlog_up
+if %ret==#wd or %ret=="down" then goto @backlog_down
+if %ret=="text3" then call @backlog_voice,"N",%page+2:goto @backlog_loop
+if %ret=="text2" then call @backlog_voice,"N",%page+1:goto @backlog_loop
+if %ret=="text1" then call @backlog_voice,"N",%page:goto @backlog_loop
+goto @backlog_loop
+
+@backlog_up
+seplay 0,"sound\sysse\sys01.ogg"
+%page=%page+1
+if logchk(%page+2)==0 then %page=%page-1
+goto @backlog_pageload
+
+@backlog_down
+seplay 0,"sound\sysse\sys01.ogg"
+%page=%page-1
+if %page<0 then goto @backlog_end
+goto @backlog_pageload
+
+@backlog_end
+seplay 0,"sound\sysse\sys03.ogg"
+spsetdelete "log"
+return
+
+@backlog_pagestart_sub
+param %name,%num,%y
+getlogtext %num,%vtag,%vtext
+if %vtext==#NIL then spdelete "log:"+%name:return
+split %vtag,"/",%vname,%vvoice
+if %vname<>"" then
+	sp "log:vname"+%name,{name={"*730,150,#00000000","*730,150,#00000000"},x=127,y=%y,z=30}
+	spformat "log:vname"+%name,0,%vname,{font="nametext",x=0,y=0,w=27,h=5},{font="logruby0"}
+end if
+%texty=%y+35
+if %vvoice<>"" then
+	sp "log:"+%name,{name={"*730,150,#00000000","*730,150,#00000000"},x=150,y=%texty,z=30}
+	spformat "log:"+%name,0,%vtext,{font="logtext0",x=0,y=0,w=27,h=5},{font="logruby0"}
+	spformat "log:"+%name,1,%vtext,{font="logtext1",x=0,y=0,w=27,h=5},{font="logruby1"}
+	btn "log:"+%name
+else
+	sp "log:"+%name,{name="*730,150,#00000000",x=160,y=%texty,z=30}
+	spformat "log:"+%name,0,%vtext,{font="logtext0",x=0,y=12,w=27,h=5},{font="logruby0"}
+end if
+return
+
+@backlog_voice
+param %num
+getlogtext %num,%vtag,%vtext
+split %vtag,"/",%vname,%vvoice
+voiceplay "sound\vo\"+%vvoice+".ogg"
+return
+
+;-------------------------------
+; コンフィグ
+;-------------------------------
+@config
+
+spset "cfg",100
+sp "cfg:bg",{name="pc\ja\conf\ns\bg.png",x=0,y=0,z=1000}
+sp "cfg:tab",{name="pc\ja\conf\ns\emptytab.png",x=38,y=28,z=901}
+sp "cfg:tabtext",{name="?コンフィグ,nametext",x=550,y=35,z=900}
+if _notinmenu==1 then sp "cfg:exit",{name={"pc\ja\conf\ns\bt_title.png","pc\ja\conf\ns\bt_title_selected.png"},x=601,y=650,z=104}
+sp "cfg:reset",{name={"pc\ja\conf\ns\bt_default.png","pc\ja\conf\ns\bt_default_selected.png"},x=822,y=650,z=105}
+sp "cfg:return",{name={"pc\ja\conf\ns\bt_return.png","pc\ja\conf\ns\bt_return_selected.png"},x=1043,y=650,z=106}
+print #f,250
+
+@config_btnload
+btnclear "cfg"
+if _notinmenu==1 then btn "cfg:exit"
+btn "cfg:reset"
+btn "cfg:return"
+sp "cfg:samplemw",{name="pc\ja\conf\mw.png",x=78,y=498,z=104}
+
+if _messkip==1 then
+	sp "cfg:messkip1",{name="pc\ja\conf\ns\bt_on_inuse.png",x=140,y=407,z=10}
+	sp "cfg:messkip0",{name={"pc\ja\conf\ns\bt_on.png","pc\ja\conf\ns\bt_on_selected.png"},x=365,y=407,z=11}
+	btn "cfg:messkip0"
+else
+	sp "cfg:messkip1",{name={"pc\ja\conf\ns\bt_on.png","pc\ja\conf\ns\bt_on_selected.png"},x=140,y=407,z=10}
+	sp "cfg:messkip0",{name="pc\ja\conf\ns\bt_on_inuse.png",x=365,y=407,z=11}
+	btn "cfg:messkip1"
+end if
+;スクリーンモードはAlt+ENTERや最大化ボタンでも変化します。必ず、状態をチェックして対応してください。
+if getscreen()==0 then
+	sp "cfg:window",{name="pc\ja\conf\ns\bt_on_inuse.png",x=988,y=456,z=16}
+	sp "cfg:full",{name={"pc\ja\conf\ns\bt_on.png","pc\ja\conf\ns\bt_on_selected.png"},x=762,y=456,z=17}
+	btn "cfg:full"
+else
+	sp "cfg:window",{name={"pc\ja\conf\ns\bt_on.png","pc\ja\conf\ns\bt_on_selected.png"},x=988,y=456,z=16}
+	sp "cfg:full",{name="pc\ja\conf\ns\bt_on_inuse.png",x=762,y=456,z=17}
+	btn "cfg:window"
+end if
+for %i=0 to 6
+	;０－６の各ボタンを設定しています。
+	if _textspeed==%i then
+		sp "cfg:text"+str(%i),{name="?"+zenkaku(str(%i))+",menu1",x=64+%i*55,y=161,z=18+%i}
+	else
+		%str="?"+zenkaku(str(%i))
+		sp "cfg:text"+str(%i),{name={%str+",menu0",%str+",menu1"},x=64+%i*55,y=161,z=18+%i}
+		btn "cfg:text"+str(%i)
+	end if
+
+	if _autospeed==%i then
+		sp "cfg:auto"+str(%i),{name="?"+zenkaku(str(%i))+",menu1",x=64+%i*55,y=291,z=24+%i}
+	else
+		%str="?"+zenkaku(str(%i))
+		sp "cfg:auto"+str(%i),{name={%str+",menu0",%str+",menu1"},x=64+%i*55,y=291,z=24+%i}
+		btn "cfg:auto"+str(%i)
+	end if
+
+	;if _textalpha==%i then
+	;	sp "cfg:alpha"+str(%i),{name="?"+zenkaku(str(%i))+",menu1",x=64+%i*55,y=421,z=30+%i}
+	;else
+	;	%str="?"+zenkaku(str(%i))
+	;	sp "cfg:alpha"+str(%i),{name={%str+",menu0",%str+",menu1"},x=64+%i*55,y=421,z=30+%i}
+	;	btn "cfg:alpha"+str(%i)
+	;end if
+
+	if _bgmvol==%i then
+		sp "cfg:bgm"+str(%i),{name="?"+zenkaku(str(%i))+",menu1",x=690+%i*55,y=154,z=10}
+	else
+		%str="?"+zenkaku(str(%i))
+		sp "cfg:bgm"+str(%i),{name={%str+",menu0",%str+",menu1"},x=690+%i*55,y=154,z=10}
+		btn "cfg:bgm"+str(%i)
+	end if
+
+	if _voicevol==%i then
+		sp "cfg:voice"+str(%i),{name="?"+zenkaku(str(%i))+",menu1",x=690+%i*55,y=264,z=10}
+	else
+		%str="?"+zenkaku(str(%i))
+		sp "cfg:voice"+str(%i),{name={%str+",menu0",%str+",menu1"},x=690+%i*55,y=264,z=10}
+		btn "cfg:voice"+str(%i)
+	end if
+
+	if _sevol==%i then
+		sp "cfg:se"+str(%i),{name="?"+zenkaku(str(%i))+",menu1",x=690+%i*55,y=364,z=10}
+	else
+		%str="?"+zenkaku(str(%i))
+		sp "cfg:se"+str(%i),{name={%str+",menu0",%str+",menu1"},x=690+%i*55,y=364,z=10}
+		btn "cfg:se"+str(%i)
+	end if
+next
+
+@config_loop
+btnexec %ret,"cfg",{sizechange=1} ; コンフィグではウィンドウサイズ変化に対応。表示に反映させます。
+if %ret=="reset" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	yesnobox %ret,"初期化しますか？","確認"
+	if %ret==1 then 
+		seplay 0,"sound\sysse\sys01.ogg"
+		gosub @first_settings
+		gosub @config_exec
+		spsetdelete "cfg"
+		return
+	else 
+		seplay 0,"sound\sysse\sys03.ogg"
+		goto @config_loop
+	end if
+end if
+if %ret=="exit" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	yesnobox %ret,"タイトルに戻りますか？","確認"
+	if %ret==1 then seplay 0,"sound\sysse\sys01.ogg":spsetdelete "window":spsetdelete "cfg":goto @start else seplay 0,"sound\sysse\sys03.ogg":goto @config_loop
+end if
+if %ret==#r or %ret=="return" then seplay 0,"sound\sysse\sys03.ogg":spsetdelete "cfg":return
+if %ret=="window" then seplay 0,"sound\sysse\sys01.ogg":setscreen 0:goto @config_btnload
+if %ret=="full" then seplay 0,"sound\sysse\sys01.ogg":setscreen 1:goto @config_btnload
+if %ret=="messkip1" then seplay 0,"sound\sysse\sys01.ogg":_messkip=1:goto @config_btnload
+if %ret=="messkip0" then seplay 0,"sound\sysse\sys01.ogg":_messkip=0:goto @config_btnload
+if %ret==#sizechange then seplay 0,"sound\sysse\sys01.ogg":goto @config_btnload ; Alt+ENTERもしくは最大化ボタン対策
+if left(%ret,4)=="text" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	_textspeed=num(mid(%ret,4,100))
+	goto @config_btnload
+end if
+if left(%ret,4)=="auto" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	_autospeed=num(mid(%ret,4,100))
+	goto @config_btnload
+end if
+if left(%ret,4)=="alpha" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	_textalpha=num(mid(%ret,5,100))
+	goto @config_btnload
+end if
+if left(%ret,3)=="bgm" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	_bgmvol=num(mid(%ret,3,100))
+	gosub @config_exec
+	goto @config_btnload
+end if
+if left(%ret,5)=="voice" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	_voicevol=num(mid(%ret,5,100))
+	gosub @config_exec
+	goto @config_btnload
+end if
+if left(%ret,2)=="se" then
+	seplay 0,"sound\sysse\sys01.ogg"
+	_sevol=num(mid(%ret,2,100))
+	gosub @config_exec
+	goto @config_btnload
+end if
+goto @config_loop
+;-------------------------------
+; コンフィグ設定の実行
+;-------------------------------
+@config_exec
+;ボリューム0は無音(-10000)、あとは計算式で微調整している。0が最大ボリュームなので、6で0に。
+if _bgmvol==0 then bgmvolume -10000 else bgmvolume -2400+_bgmvol*400
+if _voicevol==0 then voicevolume -10000 else voicevolume -2400+_voicevol*400
+if _sevol==0 then sevolume -10000 else sevolume -2400+_sevol*400
+return
+
+;-------------------------------
+; 初期化ルーチン
+;-------------------------------
+@system_initialize
+if not isdef(_first) then gosub @first_settings
+gosub @config_exec
+gosub @define_commands
+gosub @define_font
+gosub @game_logo
+return
+
+;-------------------------------
+;初回起動時のシステム変数設定
+;-------------------------------
+@first_settings
+_first=1
+_textspeed=3		;テキストの速度(0-6)
+_autospeed=3		;オートモードの速度(0-6)
+_textalpha=5		;テキストのalpha(0-6)
+_messkip=1
+
+_bgmvol=6		   ;BGMのボリューム(0-6)
+_voicevol=6		 ;VOICEのボリューム(0-6)
+_sevol=6			;SEのボリューム(0-6)
+_tabpos=2
+return
+
+;-------------------------------
+; フォント定義
+;-------------------------------
+;フォントはセーブされないので、必ず起動時に一回だけ初期化する。
+@define_font
+font "text",{width=28,height=28,color=#464646}
+font "nametext",{width=28,height=28,color=#FFFFFFFF}
+font "selectdtext",{width=28,height=28,color=#999999}
+font "ruby",{width=14,height=14,color=#FFFFFFFF}
+font "logtext0",{width=25,height=25,color=#464646}
+font "logruby0",{width=12,height=12,color=#FFFFFF22}
+font "logtext1",{width=25,height=25,color=#999999}
+font "logruby1",{width=12,height=12,color=#FFFFFFFF}
+font "menu0",{width=28,height=28,color=#464646}
+font "menu1",{width=28,height=28,color=#999999}
+font "save0",{width=13,height=20,color=#464646}
+font "save1",{width=13,height=20,color=#999999}
+font "sysfont0",{width=11,height=23,color=#999999}
+font "sysfont1",{width=11,height=23,color=#464646}
+return
+
+;-------------------------------
+; 演出コマンド定義
+;-------------------------------
+;演出命令は全部自分で組まなければなりませんが、仕様は自由にできます。
+;例）音楽等は、たとえばbgm 数値 などというような命令を作ると楽でしょう。
+
+@define_commands
+defsub  bg0, "S"	   ; bg0 "filename"
+defsub   bg, "SS?N?S"  ; bg "filename",#エフェクト[,時間,ルール画像]
+defsub  ld0, "NS"	  ; ld0 pos,"filename"
+defsub   ld, "NSS?N?S" ; ld pos,"filename",#エフェクト[,時間,ルール画像]
+defsub  cl0, "N"	   ; cl0 pos
+defsub   cl, "NS?N?S"  ; cl pos,#エフェクト[,時間,ルール画像]
+defsub cla0, ""		; cla0
+defsub  cla, "S?N?S"   ; cla #エフェクト[,時間,ルール画像]
+defsub window,"N"	  ; 0=テキストウィンドウ非表示 1=テキストウィンドウ表示
+defsub playabbgm,"SS"
+return
+
+;-------------------------------
+; 演出コマンド実装
+;-------------------------------
+@bg
+;背景ロード、エフェクト
+param %fn,%ef,%tm,%rule
+spdeletes "chr" ; chrで始まるスプライト、つまり立ち絵を全部消す
+bg0 %fn
+print %ef,%tm,%rule
+return
+
+@bg0
+;背景ロード（表示はまだしない。あとでまとめてprintで表示できる）
+param %fn
+sp "bg",{name=%fn,x=0,y=0,z=1000}
+return
+
+@ld
+;立ち絵ロード、エフェクト。
+;posは-1が左、0が真ん中、1が右
+param %pos,%fn,%ef,%tm,%rule
+ld0 %pos,%fn
+print %ef,%tm,%rule
+return
+
+@ld0
+;立ち絵ロード（表示はまだしない。あとでまとめてprintで表示できる）
+;posは-1が左、0が真ん中、1が右
+param %pos,%fn
+%spname="chr"+str(%pos)
+ggetsize %w,%h ; ゲーム画面の大きさを取得
+sp %spname,{name=%fn,x=%w,y=%h} ;画面外へロード
+getspinfo %spname,%info ;画像の情報を取得
+if %pos==-1 then %x=floor(%w/3-%info.w/2)
+if %pos==0 then %x=floor(%w/2-%info.w/2)
+if %pos==1 then %x=floor(%w*2/3-%info.w/2)
+%y=%h-%info.h
+spmove %spname,%x,%y
+return
+
+@cl
+;立ち絵消去、エフェクト
+param %pos,%ef,%tm,%rule
+cl0 %pos
+print %ef,%tm,%rule
+return
+
+@cl0
+;立ち絵消去（表示はまだしない。あとでまとめてprintで表示できる）
+param %pos
+spdelete "chr"+str(%pos)
+return
+
+@cla
+;立ち絵を全部消す、エフェクト
+param %ef,%tm,%rule
+cla0
+print %ef,%tm,%rule
+return
+
+@cla0
+;立ち絵を全部消す
+spdeletes "chr"
+return
+
+@window
+;テキストウィンドウの表示・非表示を切り替える
+param %flag
+if %flag==0 then spvisible "window",0 else spvisible "window",1
+print #c
+return
+
+@playabbgm
+param %abgm,%bbgm
+bgmplayonce %abgm
+bgmplay %bbgm
+return
