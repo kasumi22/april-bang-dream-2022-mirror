@@ -1,4 +1,5 @@
 # april-bang-dream-2022-mirror
+Stop working indefinitely/无期限停止工作
 
 ## English
 This branch is the BanG Dream 2022 April fool day's NScriptor remaster version

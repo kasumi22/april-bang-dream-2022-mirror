@@ -23,10 +23,12 @@ sp "logo:white",{name="*#FFFFFFFF",x=0,y=0,z=1099}
 print #f,1000
 sp "logo:busimo",{name="pc\ja\busimo.png",x=0,y=0,z=1098}
 print #f,1000
+lrclick
 sp "logo:whiteb",{name="*#FFFFFFFF",x=0,y=0,z=1097}
 print #f,1000
 sp "logo:craftegg",{name="pc\ja\craftegg.png",x=0,y=0,z=1096}
 print #f,1000
+lrclick
 sp "logo:whitec",{name="*#FFFFFFFF",x=0,y=0,z=1095}
 print #f,1000
 spsetdelete "logo"
@@ -43,11 +45,12 @@ sp "title:start",{name={"pc\ja\title\ns\bt_start.png","pc\ja\title\ns\bt_start_s
 sp "title:load",{name={"pc\ja\title\ns\bt_load.png","pc\ja\title\ns\bt_load_selected.png"},x=391,y=628,z=100};
 sp "title:config",{name={"pc\ja\title\ns\bt_config.png","pc\ja\title\ns\bt_config_selected.png"},x=651,y=628,z=100};
 sp "title:extra",{name={"pc\ja\title\ns\bt_extra_disabled.png","pc\ja\title\ns\bt_extra_disabled.png"},x=910,y=628,z=100};
+print #f,500
 btn "title:start"
 btn "title:load"
 btn "title:config"
 btn "title:extra"
-bgmplay "sound\bgm\bgm001_a.ogg"
+BGMPLAY "sound\bgm\bgm001_a.ogg"
 
 @menu_loop
 btnexec %ret,"title"
@@ -301,11 +304,13 @@ btn "window:selwin1"
 btn "window:selwin2"
 btn "window:selwin3"
 btn "window:selwin4"
+print #f,250
 btn "window:erase"
 btn "window:save"
 btn "window:load"
 btn "window:log"
 btn "window:config"
+
 @sel_loop
 btnexec %ret,"window",{wheel=1}
 if %ret=="selwin0" then seplay 0,"sound\sysse\sys01.ogg":spdeletes "window:sel":print #c:return %lb0
@@ -343,7 +348,6 @@ sp "sl:pgup",{name="pc\ja\save\ns\bt_dw.png",x=957,y=34,z=900}
 sp "sl:pgdw",{name="pc\ja\save\ns\bt_up.png",x=1186,y=34,z=900}
 sp "sl:return",{name={"pc\ja\conf\ns\bt_return.png","pc\ja\conf\ns\bt_return_selected.png"},x=1043,y=656,z=900}
 if _notinmenu==1 then sp "sl:backtotitle",{name={"pc\ja\save\ns\bt_title.png","pc\ja\save\ns\bt_title_selected.png"},x=822,y=656,z=900}
-print #f,250
 
 @saveload_btnload
 btnclear "sl"
@@ -361,6 +365,7 @@ for %i=0 to 11
 		btn "sl:data"+str(%i)
 	end if
 next
+print #f,250
 
 @saveload_loop
 btnexec %ret,"sl"
@@ -433,14 +438,14 @@ sp "log:name03",{name="pc\ja\blog\name.png",x=112,y=421,z=800}
 sp "log:up",{name={"pc\ja\blog\ns\bt_up.png","pc\ja\blog\ns\bt_up_selected.png"},x=1170,y=89,z=0}
 sp "log:down",{name={"pc\ja\blog\ns\bt_dw.png","pc\ja\blog\ns\bt_dw_selected.png"},x=1170,y=573,z=0}
 sp "log:ret",{name={"pc\ja\blog\ns\bt_ret.png","pc\ja\blog\ns\bt_ret_selected.png"},x=524,y=606,z=800}
-print #f,250
 %page=0
 @backlog_pageload
 btnclear
 call @backlog_pagestart_sub,"SNN","text3",%page+2,424
 call @backlog_pagestart_sub,"SNN","text2",%page+1,239
 call @backlog_pagestart_sub,"SNN","text1",%page  ,54
-print #c
+print #f,250
+;print #c
 btn "log:up"
 btn "log:down"
 btn "log:ret"
@@ -512,7 +517,6 @@ sp "cfg:tabtext",{name="?コンフィグ,nametext",x=550,y=35,z=900}
 if _notinmenu==1 then sp "cfg:exit",{name={"pc\ja\conf\ns\bt_title.png","pc\ja\conf\ns\bt_title_selected.png"},x=601,y=650,z=104}
 sp "cfg:reset",{name={"pc\ja\conf\ns\bt_default.png","pc\ja\conf\ns\bt_default_selected.png"},x=822,y=650,z=105}
 sp "cfg:return",{name={"pc\ja\conf\ns\bt_return.png","pc\ja\conf\ns\bt_return_selected.png"},x=1043,y=650,z=106}
-print #f,250
 
 @config_btnload
 btnclear "cfg"
@@ -590,6 +594,7 @@ for %i=0 to 6
 		btn "cfg:se"+str(%i)
 	end if
 next
+print #f,250
 
 @config_loop
 btnexec %ret,"cfg",{sizechange=1} ; コンフィグではウィンドウサイズ変化に対応。表示に反映させます。
@@ -726,7 +731,6 @@ defsub   cl, "NS?N?S"  ; cl pos,#エフェクト[,時間,ルール画像]
 defsub cla0, ""		; cla0
 defsub  cla, "S?N?S"   ; cla #エフェクト[,時間,ルール画像]
 defsub window,"N"	  ; 0=テキストウィンドウ非表示 1=テキストウィンドウ表示
-defsub playabbgm,"SS"
 return
 
 ;-------------------------------
@@ -799,10 +803,4 @@ return
 param %flag
 if %flag==0 then spvisible "window",0 else spvisible "window",1
 print #c
-return
-
-@playabbgm
-param %abgm,%bbgm
-bgmplayonce %abgm
-bgmplay %bbgm
 return

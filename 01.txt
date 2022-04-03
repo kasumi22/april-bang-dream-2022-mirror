@@ -32,7 +32,7 @@ spset "novel",99
 ;spsetdelete "novel"
 ;print #F,3000
 bg "image\bg\zbg12a.jpg",#F,2000
-playabbgm "sound\bgm\bgm003_a.ogg","sound\bgm\bgm003_b.ogg"
+bgmplay "sound\bgm\bgm003_a.ogg"
 [ひまり]寝坊した～っ！\n友達と一緒に登校するはずだったのに～っ！
 bg "image\bg\bg14a.jpg",#F,250
 [ひまり]（私の名前は上原ひまり、１７歳。\n友達と一緒に登校するはずだったのに～っ！）
