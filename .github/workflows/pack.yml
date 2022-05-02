@@ -27,7 +27,7 @@ jobs:
           echo --- Install cmake and build pfs_upk ---
           cd ~
           sudo apt-get install cmake git build-essential -y
-          git clone https://github.com/nextgal/pfs_upk.git
+          git clone -b test https://github.com/shenglin00/pfs_upk.git
           mkdir pfs_upk/build && cd pfs_upk/build
           cmake .. && make
           sudo ln pfs_upk /bin/pfs_upk
